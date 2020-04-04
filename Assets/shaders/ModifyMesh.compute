@@ -1,8 +1,14 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
-RWStructuredBuffer<float3>  _PositionBuffer;
+
+struct _Vertex {
+	float3 position;
+	float3 velocity;
+	float2 uv;
+};
+
+RWStructuredBuffer<_Vertex>  _VertexBuffer;
 StructuredBuffer<float3>    _InitialPositionBuffer;
-RWStructuredBuffer<float3> _VelocityBuffer;
 
 float _Time;
 
@@ -10,11 +16,11 @@ float _Time;
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
 
-	float3 velocity = _VelocityBuffer[id.x];
+	float3 velocity = _VertexBuffer[id.x].velocity;
 
-	velocity += float3((sin(_Time*0.5 +0.125+ _PositionBuffer[id.x].z * 0.16)),0., (sin(_Time + _PositionBuffer[id.x].y * 0.1))*1.);
+	velocity += float3((sin(_Time*0.5 +0.125+ _VertexBuffer[id.x].position.z * 0.16)),0., (sin(_Time + _VertexBuffer[id.x].position.y * 0.1))*1.);
 	velocity *= 0.1;
 
-	_PositionBuffer[id.x] += velocity;
-	_VelocityBuffer[id.x] = velocity;
+	_VertexBuffer[id.x].position += velocity;
+	_VertexBuffer[id.x].velocity  = velocity;
 }
