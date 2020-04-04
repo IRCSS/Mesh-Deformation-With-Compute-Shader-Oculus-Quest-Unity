@@ -5,8 +5,16 @@ using UnityEngine;
 public class meshManager : MonoBehaviour
 {
     // =================================================================
-    
-    public  ComputeShader m_computeShader;
+    //public struct _Vertex
+    //{
+    //    public float[3] position;
+    //    public float[3] velocity;
+    //    public float[2] uvs;
+    //}
+
+    // =================================================================
+
+    public ComputeShader m_computeShader;
 
     // _________________________________
 
@@ -23,6 +31,14 @@ public class meshManager : MonoBehaviour
     private const string kernelName = "CSMain";
 
     // =================================================================
+    ~meshManager()
+    {
+        m_PositionBuffer.Dispose();
+        m_VelocityBuffer.Dispose();
+        m_defaultPositionsBuffer.Dispose();
+    }
+
+
     void Start()
     {
         InitializeMesh();
@@ -57,12 +73,16 @@ public class meshManager : MonoBehaviour
         }
 
         mf.sharedMesh = m_mesh;
+
+        Debug.Log(string.Format("Initialized the mesh: {0}, for the compute shader", m_mesh));
     }
 
     void InitializeCPUBuffers()
     {
         m_verticesPosition = m_mesh.vertices;
         m_verticesModified = new Vector3[m_verticesPosition.Length];
+
+        Debug.Log(string.Format("Initialized the cpu buffers with {0} vertices, for the compute shader", m_verticesPosition.Length));
     }
 
     void InitializeGPUBuffers()
@@ -76,36 +96,42 @@ public class meshManager : MonoBehaviour
         m_defaultPositionsBuffer = new ComputeBuffer(m_verticesPosition.Length, sizeOfVector3);
         m_defaultPositionsBuffer.SetData(m_verticesPosition);
 
-         m_VelocityBuffer = new ComputeBuffer(m_verticesPosition.Length, sizeof(double) * 3);
+         m_VelocityBuffer = new ComputeBuffer(m_verticesPosition.Length, sizeOfVector3);
 
         int kernel = m_computeShader.FindKernel(kernelName);
 
         m_computeShader.SetBuffer(kernel, "_VelocityBuffer",        m_VelocityBuffer);
-        m_computeShader.SetBuffer(kernel, "_PositionBuffer",        m_VelocityBuffer);
-        m_computeShader.SetBuffer(kernel, "_InitialPositionBuffer", m_VelocityBuffer);
+        m_computeShader.SetBuffer(kernel, "_PositionBuffer",        m_PositionBuffer);
+        m_computeShader.SetBuffer(kernel, "_InitialPositionBuffer", m_defaultPositionsBuffer);
+
+        Debug.Log(string.Format("Initialized the GPU buffers with {0} vertices, for the compute shader", m_verticesPosition.Length));
 
     }
 
    void InitializeShaderParameters()
     {
-
+        Debug.Log(string.Format("Initialized Shader Parameters"));
     }
 
     void UpdateRuntimeShaderParameter()
     {
-
+        m_computeShader.SetFloat("_Time", Time.time);
     }
 
     void RunShader()
     {
         int kernel = m_computeShader.FindKernel(kernelName);
-        m_computeShader.Dispatch(kernel, m_verticesPosition.Length, 1, 1);
+        m_computeShader.Dispatch(kernel,60000, 1, 1);
+
+        if (Time.time % 5 == 0) Debug.Log("Running Compute Shader");
     }
 
     void PullResults()
     {
+        
         m_PositionBuffer.GetData(m_verticesModified);
         m_mesh.vertices = m_verticesModified;
+        
     }
 
 }
