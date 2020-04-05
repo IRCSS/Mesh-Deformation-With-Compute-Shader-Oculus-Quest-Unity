@@ -28,23 +28,27 @@ public class meshManager : MonoBehaviour
 
     // =================================================================
 
-    public ComputeShader m_computeShader;
-
+    public ComputeShader  m_computeShader;
+    public Transform      m_RightHandCollider;
     // _________________________________
 
     private _Vertex[]     m_vertexBufferCPU;
     private Vector3[]     m_verticesPosition;       // The original Vertices position of the mesh. Used once on initialize
     private Vector2[]     m_verticesUV;
-    
+    private int[]         m_indexBuffer;
 
 
     private ComputeBuffer GPU_VertexBuffer;
     private ComputeBuffer GPU_defaultPositionsBuffer; // Read only Bufffer
 
-    private Mesh          m_mesh;
 
+
+    private Mesh           m_mesh;
+    private Material[]     m_mats;
 
     private const string kernelName = "CSMain";
+
+    private Vector3 m_rightControllerLastFramePostion;
 
     // =================================================================
    void OnDisable()
@@ -56,6 +60,8 @@ public class meshManager : MonoBehaviour
 
     void Start()
     {
+        m_rightControllerLastFramePostion = m_RightHandCollider.transform.position;
+
         InitializeMesh();
         InitializeCPUBuffers();
         InitializeGPUBuffers();
@@ -66,7 +72,6 @@ public class meshManager : MonoBehaviour
     {
         UpdateRuntimeShaderParameter();
         RunShader();
-        PullResults();
     }
 
 
@@ -107,6 +112,9 @@ public class meshManager : MonoBehaviour
         }
 
 
+        m_indexBuffer = m_mesh.triangles;
+
+
         Debug.Log(string.Format("Initialized the cpu buffers with {0} vertices, for the compute shader", m_verticesPosition.Length));
     }
 
@@ -133,11 +141,38 @@ public class meshManager : MonoBehaviour
 
    void InitializeShaderParameters()
     {
-        Debug.Log(string.Format("Initialized Shader Parameters"));
+
+        Renderer meshRenderer = this.transform.GetChild(0).GetComponent<Renderer>();
+        if(meshRenderer == null)
+        {
+            Debug.LogError(string.Format("Attempted to acces non exisiting mesh Renderer, on game Object {0}", this.gameObject.name));
+            return;
+        }
+
+        m_mats = meshRenderer.materials;
+        
+        foreach(Material m in m_mats)
+        {
+            m.SetBuffer("_VertexBuffer", GPU_VertexBuffer);
+        }
+        
+
+        Debug.Log(string.Format("Initialized Shader Parameters. {0} materials were found", m_mats.Length));
     }
 
     void UpdateRuntimeShaderParameter()
     {
+
+        Vector3 posInObjectLocal = this.transform.GetChild(0).transform.worldToLocalMatrix * new Vector4(m_RightHandCollider.position.x, m_RightHandCollider.position.y, m_RightHandCollider.position.z, 1.0f);
+        
+        m_computeShader.SetVector("_HandPosition", posInObjectLocal);
+
+        Vector3 rightHandVel = m_RightHandCollider.transform.position - m_rightControllerLastFramePostion;
+        m_rightControllerLastFramePostion = m_RightHandCollider.transform.position;
+
+        rightHandVel = this.transform.GetChild(0).transform.worldToLocalMatrix * new Vector4(rightHandVel.x, rightHandVel.y, rightHandVel.z, 0.0f);
+        m_computeShader.SetVector("_RHandVelocity", rightHandVel);
+
         m_computeShader.SetFloat("_Time", Time.time);
     }
 
@@ -145,14 +180,11 @@ public class meshManager : MonoBehaviour
     {
         int kernel = m_computeShader.FindKernel(kernelName);
         m_computeShader.Dispatch(kernel,60000, 1, 1);
-
-        if (Time.time % 5 == 0) Debug.Log("Running Compute Shader");
+        
     }
 
     void PullResults()
     {
-      
-
         GPU_VertexBuffer.GetData(m_vertexBufferCPU);
 
         for (int i = 0; i<m_vertexBufferCPU.Length; i++)

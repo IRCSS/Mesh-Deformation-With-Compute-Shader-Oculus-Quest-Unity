@@ -8,18 +8,32 @@ struct _Vertex {
 };
 
 RWStructuredBuffer<_Vertex>  _VertexBuffer;
-StructuredBuffer<float3>    _InitialPositionBuffer;
+StructuredBuffer<float3>     _InitialPositionBuffer;
 
-float _Time;
+float  _Time;
+float3 _HandPosition;
+float3 _RHandVelocity;
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
 
 	float3 velocity = _VertexBuffer[id.x].velocity;
+	float3 initialPos = _InitialPositionBuffer[id.x];
 
-	velocity += float3((sin(_Time*0.5 +0.125+ _VertexBuffer[id.x].position.z * 0.16)),0., (sin(_Time + _VertexBuffer[id.x].position.y * 0.1))*1.);
-	velocity *= 0.1;
+	
+	velocity *= 0.002;
+
+	float3 vToHand  = _VertexBuffer[id.x].position - _HandPosition;
+	float  distance = length(vToHand);
+
+	vToHand = normalize(vToHand);
+	//if(distance<= 2.0) velocity += vToHand * 0.15 * clamp(0., 2., dot(vToHand, _RHandVelocity));
+	if (distance <= 2.0) velocity += _RHandVelocity;
+
+	float3 vToOrig = initialPos - _VertexBuffer[id.x].position;
+
+	velocity += vToOrig *0.005;
 
 	_VertexBuffer[id.x].position += velocity;
 	_VertexBuffer[id.x].velocity  = velocity;
