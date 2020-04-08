@@ -61,7 +61,6 @@ public class meshManager : MonoBehaviour
     void Start()
     {
         m_rightControllerLastFramePostion = m_RightHandCollider.transform.position;
-
         InitializeMesh();
         InitializeCPUBuffers();
         InitializeGPUBuffers();
@@ -74,6 +73,11 @@ public class meshManager : MonoBehaviour
         RunShader();
     }
 
+
+    public ComputeBuffer GetVertexBuffer()
+    {
+        return GPU_VertexBuffer;
+    }
 
     // =================================================================
     void InitializeMesh()

@@ -1,0 +1,13 @@
+#
+# Wavefront material file
+# Created in RealityCapture
+# Engine version v1.0.3.10393
+#
+
+newmtl LicencedVersion_Model_6_u1_v1
+Ka 1 1 1
+Kd 1 1 1
+d 1
+Ns 0
+illum 1
+map_Kd LicencedVersion_Model_6_u1_v1.png

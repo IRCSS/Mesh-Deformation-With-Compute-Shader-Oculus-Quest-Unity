@@ -29,11 +29,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 	vToHand = normalize(vToHand);
 	//if(distance<= 2.0) velocity += vToHand * 0.15 * clamp(0., 2., dot(vToHand, _RHandVelocity));
-	if (distance <= 2.0) velocity += _RHandVelocity;
+     velocity += _RHandVelocity * smoothstep(4., 2., distance) *  saturate(dot(vToHand, _RHandVelocity));
 
 	float3 vToOrig = initialPos - _VertexBuffer[id.x].position;
 
-	velocity += vToOrig *0.005;
+	velocity += vToOrig *0.01;
 
 	_VertexBuffer[id.x].position += velocity;
 	_VertexBuffer[id.x].velocity  = velocity;
