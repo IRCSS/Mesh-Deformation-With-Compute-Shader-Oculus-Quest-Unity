@@ -30,6 +30,16 @@ public class meshManager : MonoBehaviour
 
     public ComputeShader  m_computeShader;
     public Transform      m_RightHandCollider;
+    public Transform      m_leftHandCollider;
+
+    [Header("Balancing Parameters")]
+    public float m_pushforce              = 1.0f;
+    public float m_drag                   = 0.01f;
+    public float m_elasticity             = 0.01f;
+    public float m_colliderBeginDistance  = 2.0f;
+    public float m_colliderEndDistance    = 4.0f;
+
+
     // _________________________________
 
     private _Vertex[]     m_vertexBufferCPU;
@@ -49,9 +59,11 @@ public class meshManager : MonoBehaviour
     private const string kernelName = "CSMain";
 
     private Vector3 m_rightControllerLastFramePostion;
+    private Vector3 m_LeftControllerLastFramePostion;
+
 
     // =================================================================
-   void OnDisable()
+    void OnDisable()
     {
         GPU_VertexBuffer.Dispose();
         GPU_defaultPositionsBuffer.Dispose();
@@ -61,6 +73,7 @@ public class meshManager : MonoBehaviour
     void Start()
     {
         m_rightControllerLastFramePostion = m_RightHandCollider.transform.position;
+        m_LeftControllerLastFramePostion  = m_leftHandCollider.transform.position;
         InitializeMesh();
         InitializeCPUBuffers();
         InitializeGPUBuffers();
@@ -78,6 +91,20 @@ public class meshManager : MonoBehaviour
     {
         return GPU_VertexBuffer;
     }
+
+    public void SetElacticty(float toSet) { m_elasticity = toSet; }
+
+    // magintude of a vector in world space is sqrt(x^2 +y^2 + z^2). The scaling matrix is diagonal and multiplies the xyz component so, 
+    // the magnitude of any given vector would be sqrt((x*scale.x)^2 + (x*scale.y)^2+ (x*scale.z)^2) in local space
+    // in this case, I will only allow uniform scaling, so scale.x= scale.y = scale.z = scalef
+    // this means we can factor the scale out and we will have worldMag / scalef = meshMagnitude
+    private float ScaleFromWorldtoMeshSpace(float scale)
+    {
+        float scalef = this.transform.localScale.x * this.transform.GetChild(0).transform.localScale.x;
+        return scale / scalef;
+    }
+
+
 
     // =================================================================
     void InitializeMesh()
@@ -139,6 +166,12 @@ public class meshManager : MonoBehaviour
         m_computeShader.SetBuffer(kernel, "_VertexBuffer",          GPU_VertexBuffer);
         m_computeShader.SetBuffer(kernel, "_InitialPositionBuffer", GPU_defaultPositionsBuffer);
 
+        m_computeShader.SetFloat("_distanceBegin", ScaleFromWorldtoMeshSpace(m_colliderBeginDistance));
+        m_computeShader.SetFloat("_distnaceEnd"  , ScaleFromWorldtoMeshSpace(m_colliderEndDistance  ));
+        m_computeShader.SetFloat("_pushforce"    , m_pushforce                                       );
+        m_computeShader.SetFloat("_elacticity"   , m_elasticity                                      );
+        m_computeShader.SetFloat("_drag"         , m_drag                                            );
+
         Debug.Log(string.Format("Initialized the GPU buffers with {0} vertices, for the compute shader", m_verticesPosition.Length));
 
     }
@@ -146,6 +179,9 @@ public class meshManager : MonoBehaviour
    void InitializeShaderParameters()
     {
 
+        
+
+        // Mesh shader parameters
         Renderer meshRenderer = this.transform.GetChild(0).GetComponent<Renderer>();
         if(meshRenderer == null)
         {
@@ -166,10 +202,20 @@ public class meshManager : MonoBehaviour
 
     void UpdateRuntimeShaderParameter()
     {
+        // ----------------------------------------------------------------------------------------------------------------------------
+        m_computeShader.SetFloat("_distanceBegin", ScaleFromWorldtoMeshSpace(m_colliderBeginDistance));
+        m_computeShader.SetFloat("_distnaceEnd"  , ScaleFromWorldtoMeshSpace(m_colliderEndDistance  ));
+        m_computeShader.SetFloat("_pushforce"    , m_pushforce                                       );
+        m_computeShader.SetFloat("_elacticity"   , m_elasticity                                      );
+        m_computeShader.SetFloat("_drag"         , m_drag                                            );
 
-        Vector3 posInObjectLocal = this.transform.GetChild(0).transform.worldToLocalMatrix * new Vector4(m_RightHandCollider.position.x, m_RightHandCollider.position.y, m_RightHandCollider.position.z, 1.0f);
+
+        // ----------------------------------------------------------------------------------------------------------------------------
+        // Right hand stuff
+        Vector3 posInObjectLocal = this.transform.GetChild(0).transform.worldToLocalMatrix
+            * new Vector4(m_RightHandCollider.position.x, m_RightHandCollider.position.y, m_RightHandCollider.position.z, 1.0f);
         
-        m_computeShader.SetVector("_HandPosition", posInObjectLocal);
+        m_computeShader.SetVector("_RHandPosition", posInObjectLocal);
 
         Vector3 rightHandVel = m_RightHandCollider.transform.position - m_rightControllerLastFramePostion;
         m_rightControllerLastFramePostion = m_RightHandCollider.transform.position;
@@ -177,6 +223,18 @@ public class meshManager : MonoBehaviour
         rightHandVel = this.transform.GetChild(0).transform.worldToLocalMatrix * new Vector4(rightHandVel.x, rightHandVel.y, rightHandVel.z, 0.0f);
         m_computeShader.SetVector("_RHandVelocity", rightHandVel);
 
+        // ----------------------------------------------------------------------------------------------------------------------------
+        // left hand stuff
+        posInObjectLocal = this.transform.GetChild(0).transform.worldToLocalMatrix 
+            * new Vector4(m_leftHandCollider.position.x, m_leftHandCollider.position.y, m_leftHandCollider.position.z, 1.0f);
+        m_computeShader.SetVector("_LHandPosition", posInObjectLocal);
+        Vector3 leftHandVel = m_leftHandCollider.transform.position - m_LeftControllerLastFramePostion;
+        m_LeftControllerLastFramePostion = m_leftHandCollider.transform.position;
+
+        leftHandVel = this.transform.GetChild(0).transform.worldToLocalMatrix * new Vector4(leftHandVel.x, leftHandVel.y, leftHandVel.z, 0.0f);
+        m_computeShader.SetVector("_LHandVelocity", leftHandVel);
+
+        // ----------------------------------------------------------------------------------------------------------------------------
         m_computeShader.SetFloat("_Time", Time.time);
     }
 

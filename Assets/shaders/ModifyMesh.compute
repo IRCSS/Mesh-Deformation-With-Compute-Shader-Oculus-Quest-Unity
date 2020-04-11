@@ -11,30 +11,57 @@ RWStructuredBuffer<_Vertex>  _VertexBuffer;
 StructuredBuffer<float3>     _InitialPositionBuffer;
 
 float  _Time;
-float3 _HandPosition;
+float3 _RHandPosition;
 float3 _RHandVelocity;
+
+float3 _LHandPosition;
+float3 _LHandVelocity;
+
+float _distanceBegin;
+float _distnaceEnd;
+float _pushforce;
+float _elacticity;
+float _drag;
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
 
-	float3 velocity = _VertexBuffer[id.x].velocity;
+	float3 velocity   = _VertexBuffer[id.x].velocity;
 	float3 initialPos = _InitialPositionBuffer[id.x];
 
-	
-	velocity *= 0.002;
+	// -------------------------------------------------------------------------------------------------------------------------------------------------------
+	// Slowing down veloctiy over time. Keep this value under 1. closer to zero is more rigid materials and closer to one more squischy materials
+	velocity *= _drag;
 
-	float3 vToHand  = _VertexBuffer[id.x].position - _HandPosition;
+	// -------------------------------------------------------------------------------------------------------------------------------------------------------
+	// Calculations for the right hand
+	float3 vToHand  = _VertexBuffer[id.x].position - _RHandPosition;
 	float  distance = length(vToHand);
 
-	vToHand = normalize(vToHand);
-	//if(distance<= 2.0) velocity += vToHand * 0.15 * clamp(0., 2., dot(vToHand, _RHandVelocity));
-     velocity += _RHandVelocity * smoothstep(4., 2., distance) *  saturate(dot(vToHand, _RHandVelocity));
+	 vToHand = normalize(vToHand);
+	
+     velocity += clamp(-2.,2.,_RHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _RHandVelocity)) * _pushforce;
 
-	float3 vToOrig = initialPos - _VertexBuffer[id.x].position;
+	 // -------------------------------------------------------------------------------------------------------------------------------------------------------
+	 // Calculations for the left hand
 
-	velocity += vToOrig *0.01;
+	 vToHand  = _VertexBuffer[id.x].position - _LHandPosition;
+	 distance = length(vToHand);
 
+	 vToHand = normalize(vToHand);
+
+	 velocity += clamp(-2., 2., _LHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _LHandVelocity)) * _pushforce;
+
+
+	 // -------------------------------------------------------------------------------------------------------------------------------------------------------
+	 // The force that brings the pieces back to their original position
+	 float3 vToOrig = initialPos - _VertexBuffer[id.x].position;
+
+	velocity += vToOrig * _elacticity;
+
+
+	// -------------------------------------------------------------------------------------------------------------------------------------------------------
 	_VertexBuffer[id.x].position += velocity;
 	_VertexBuffer[id.x].velocity  = velocity;
 }
