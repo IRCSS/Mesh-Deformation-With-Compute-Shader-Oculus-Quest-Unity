@@ -33,7 +33,7 @@
 
 
 			StructuredBuffer<_Vertex>  _VertexBuffer;
-
+			float4x4  _MATRIX_M;
             sampler2D _MainTex;
             float4    _MainTex_ST;
 
@@ -51,7 +51,9 @@
 
 				_Vertex vInfo  = _VertexBuffer[v.vid];
 
-                o.vertex = UnityObjectToClipPos(float4(vInfo.position.xyz, 1.));
+				float4 worldPos = mul(_MATRIX_M, float4(vInfo.position.xyz, 1.));
+
+                o.vertex = UnityObjectToClipPos(worldPos);
                 o.uv = vInfo.uv;
                 return o;
             }

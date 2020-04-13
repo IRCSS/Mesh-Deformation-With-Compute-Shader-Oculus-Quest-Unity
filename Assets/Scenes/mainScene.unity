@@ -548,7 +548,7 @@ PrefabInstance:
     - target: {fileID: -4216859302048453862, guid: 4c61a8b98f6dbba49b2b8c899416ee4c,
         type: 3}
       propertyPath: m_LocalScale.z
-      value: -0.2346524
+      value: 0.2346524
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4c61a8b98f6dbba49b2b8c899416ee4c, type: 3}
@@ -1363,6 +1363,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5207b5d244e7d704ba2d3f1412b991eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_renderingMethod: 0
   m_computeShader: {fileID: 7200000, guid: 00a26e137ba6f2a41b55146c6245ce0c, type: 3}
   m_RightHandCollider: {fileID: 957530060}
   m_leftHandCollider: {fileID: 1664461242}

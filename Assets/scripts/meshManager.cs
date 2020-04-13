@@ -25,8 +25,15 @@ public class meshManager : MonoBehaviour
             uvs_y = uv.y;
         }
     }
+    
+    public enum RenderMethod
+    {
+        WithStandardAPI, WithDrawProcedural
+    }
 
     // =================================================================
+
+    public RenderMethod   m_renderingMethod = RenderMethod.WithStandardAPI;
 
     public ComputeShader  m_computeShader;
     public Transform      m_RightHandCollider;
@@ -55,18 +62,20 @@ public class meshManager : MonoBehaviour
 
     private Mesh           m_mesh;
     private Material[]     m_mats;
+    private Renderer       m_meshRenderer;
 
     private const string kernelName = "CSMain";
 
     private Vector3 m_rightControllerLastFramePostion;
     private Vector3 m_LeftControllerLastFramePostion;
 
+    private GraphicsBuffer GPU_IndexBuffer;
 
     // =================================================================
-    void OnDisable()
+    void OnDestroy()
     {
-        GPU_VertexBuffer.Dispose();
-        GPU_defaultPositionsBuffer.Dispose();
+        GPU_VertexBuffer.Release();
+        GPU_defaultPositionsBuffer.Release();
     }
 
 
@@ -78,12 +87,32 @@ public class meshManager : MonoBehaviour
         InitializeCPUBuffers();
         InitializeGPUBuffers();
         InitializeShaderParameters();
+
+        if (m_renderingMethod == RenderMethod.WithDrawProcedural) m_meshRenderer.enabled = false;
+
     }
     // Update is called once per frame
     void Update()
     {
         UpdateRuntimeShaderParameter();
         RunShader();
+    }
+
+    private void OnRenderObject()
+    {
+       if (m_renderingMethod == RenderMethod.WithStandardAPI) return;
+
+        Matrix4x4 M = m_meshRenderer.localToWorldMatrix;
+        
+
+        for (int i = 0; i<m_mats.Length; i++)
+        {
+             Material m = m_mats[i];
+
+            m.SetMatrix("_MATRIX_M", M);
+             Graphics.DrawProcedural(m, m_mesh.bounds, MeshTopology.Triangles, GPU_IndexBuffer, m_indexBuffer.Length, 1, null, null, UnityEngine.Rendering.ShadowCastingMode.Off, false, 0);
+        }
+
     }
 
 
@@ -174,6 +203,13 @@ public class meshManager : MonoBehaviour
 
         Debug.Log(string.Format("Initialized the GPU buffers with {0} vertices, for the compute shader", m_verticesPosition.Length));
 
+
+        if(m_renderingMethod == RenderMethod.WithDrawProcedural)
+        {
+            GPU_IndexBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Index, m_indexBuffer.Length, sizeof(int));
+            GPU_IndexBuffer.SetData(m_indexBuffer);
+        }
+
     }
 
    void InitializeShaderParameters()
@@ -182,17 +218,21 @@ public class meshManager : MonoBehaviour
         
 
         // Mesh shader parameters
-        Renderer meshRenderer = this.transform.GetChild(0).GetComponent<Renderer>();
-        if(meshRenderer == null)
+         m_meshRenderer= this.transform.GetChild(0).GetComponent<Renderer>();
+        if(m_meshRenderer == null)
         {
             Debug.LogError(string.Format("Attempted to acces non exisiting mesh Renderer, on game Object {0}", this.gameObject.name));
             return;
         }
 
-        m_mats = meshRenderer.materials;
-        
-        foreach(Material m in m_mats)
+        m_mats = m_meshRenderer.materials;
+
+        Matrix4x4 M = Matrix4x4.identity; // This is so that I can use the same shader for both draw procedural and standard API. The standard API one, the mvp matrix is taken care of by unity itself, so I will just pass on identity matrix. 
+                                          // technically  this way I am wasting 16 multiply and 16 add instruction on the vertex shader, but for the porpuses of demonstration, I dont have to maintain two shaders/ uniforms/ materials.  
+        foreach (Material m in m_mats)
         {
+
+            m.SetMatrix("_MATRIX_M", M);
             m.SetBuffer("_VertexBuffer", GPU_VertexBuffer);
         }
         
@@ -241,7 +281,7 @@ public class meshManager : MonoBehaviour
     void RunShader()
     {
         int kernel = m_computeShader.FindKernel(kernelName);
-        m_computeShader.Dispatch(kernel,60000, 1, 1);
+        m_computeShader.Dispatch(kernel,m_verticesPosition.Length, 1, 1);
         
     }
 
