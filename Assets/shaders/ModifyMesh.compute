@@ -41,7 +41,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 	 vToHand = normalize(vToHand);
 	
-     velocity += clamp(-2.,2.,_RHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _RHandVelocity)) * _pushforce;
+     velocity += clamp(-1,1.,_RHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _RHandVelocity)) * _pushforce;
 
 	 // -------------------------------------------------------------------------------------------------------------------------------------------------------
 	 // Calculations for the left hand
@@ -51,7 +51,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 	 vToHand = normalize(vToHand);
 
-	 velocity += clamp(-2., 2., _LHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _LHandVelocity)) * _pushforce;
+	 velocity += clamp(-1., 1., _LHandVelocity) * smoothstep(_distnaceEnd, _distanceBegin, distance) *  saturate(dot(vToHand, _LHandVelocity)) * _pushforce;
 
 
 	 // -------------------------------------------------------------------------------------------------------------------------------------------------------

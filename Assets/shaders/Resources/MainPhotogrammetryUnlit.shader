@@ -17,12 +17,7 @@
 
             #include "UnityCG.cginc"
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv     : TEXCOORD0;
-				uint   vid    : SV_VertexID;
-            };
+   
 
             struct v2f
             {
@@ -36,14 +31,19 @@
 				float2 uv;
 			};
 
-			struct _Index {
-				int vertexID;
-			};
 
 			StructuredBuffer<_Vertex>  _VertexBuffer;
 
             sampler2D _MainTex;
             float4    _MainTex_ST;
+
+
+			struct appdata
+			{
+				float4 vertex : POSITION;
+				float2 uv     : TEXCOORD0;
+				uint   vid    : SV_VertexID;
+			};
 
             v2f vert (appdata v)
             {
