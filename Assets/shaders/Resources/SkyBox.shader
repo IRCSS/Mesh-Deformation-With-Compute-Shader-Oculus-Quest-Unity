@@ -8,6 +8,7 @@ Shader "Unlit/SkyBox"
 		_HorizonColor("Horizon color", Color) = (1, 1, 1, 1)
 		_SunVector   ("Sun vector"   , Vector)= (1, 1, 1, 1)
 		_SunDecay    ("Sun Decay"    , Color) = (1, 1, 1, 1)
+		_MieColor    ("MieColor"     , Color) = (1, 1, 1, 1)
 	}
 	SubShader
 	{
@@ -53,6 +54,7 @@ Shader "Unlit/SkyBox"
 			float3 _HorizonColor;
 			float3 _SunVector;
 			float3 _SunDecay;
+			float3 _MieColor;
 
 #define sunSize (100. + sin(_Time.x*20.)*10. +sin(_Time.x*40. +25.521)*5. )
 
@@ -61,9 +63,9 @@ Shader "Unlit/SkyBox"
 				// sample the texture
 				float3 dir = normalize(i.texcoord.xyz);
 				float  f   = saturate(exp(-dir.y *1.5 ));
-				
-				float sun  = exp(-dot(dir, _SunVector)*sunSize - sunSize);
-				_HorizonColor += saturate(exp(dot(dir.xz, -_SunVector.xz)) * 0.1);
+				float3 sunVector = (_SunVector);
+				float sun  = exp(-dot(dir, sunVector)*sunSize - sunSize);
+				_HorizonColor += saturate(exp(dot(dir.xz, -sunVector.xz))) * _MieColor ;
 
 				fixed3 col = _TopColor * (1.0-f) + _HorizonColor *f + sun * _SunDecay;
 				return col.xyzz;
