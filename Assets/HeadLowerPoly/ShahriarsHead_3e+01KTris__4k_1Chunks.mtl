@@ -1,0 +1,5 @@
+newmtl Chunk0_Color_Mat
+Ka 0 0 0
+Kd 0.137255 0.490196 0.647059
+Ks 0 0 0
+map_Kd Chunk0_Color.png

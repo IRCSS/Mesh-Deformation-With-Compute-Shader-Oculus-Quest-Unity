@@ -63,6 +63,7 @@ public class meshManager : MonoBehaviour
     private Mesh           m_mesh;
     private Material[]     m_mats;
     private Renderer       m_meshRenderer;
+    private Bounds         m_meshBound;
 
     private const string kernelName = "CSMain";
 
@@ -96,24 +97,18 @@ public class meshManager : MonoBehaviour
     {
         UpdateRuntimeShaderParameter();
         RunShader();
-    }
 
-    private void OnRenderObject()
-    {
-       if (m_renderingMethod == RenderMethod.WithStandardAPI) return;
-
-        Matrix4x4 M = m_meshRenderer.localToWorldMatrix;
-        
-
-        for (int i = 0; i<m_mats.Length; i++)
-        {
-             Material m = m_mats[i];
-
-            m.SetMatrix("_MATRIX_M", M);
-             Graphics.DrawProcedural(m, m_mesh.bounds, MeshTopology.Triangles, GPU_IndexBuffer, m_indexBuffer.Length, 1, null, null, UnityEngine.Rendering.ShadowCastingMode.Off, false, 0);
-        }
+        IssueProceduralDrawCommand();
 
     }
+
+    // For whatever reason, this is not fired on Andriod. Works well on windows though. I looked in the Logs, some crashes on what seems to be driver code. Not touching that :D so calling this on update.
+    //private void OnRenderObject()
+    //{
+    //    if (m_renderingMethod == RenderMethod.WithStandardAPI) return;
+
+    //    IssueProceduralDrawCommand();
+    //}
 
 
     public ComputeBuffer GetVertexBuffer()
@@ -131,6 +126,20 @@ public class meshManager : MonoBehaviour
     {
         float scalef = this.transform.localScale.x * this.transform.GetChild(0).transform.localScale.x;
         return scale / scalef;
+    }
+
+    private void IssueProceduralDrawCommand()
+    {
+        Matrix4x4 M = m_meshRenderer.localToWorldMatrix;
+        for (int i = 0; i < m_mats.Length; i++)
+        {
+            Material m = m_mats[i];
+
+            m.SetMatrix("_MATRIX_M", M);
+   
+
+            Graphics.DrawProcedural(m, m_meshBound, MeshTopology.Triangles, GPU_IndexBuffer, m_indexBuffer.Length, 1, null, null, UnityEngine.Rendering.ShadowCastingMode.Off, false, 0);
+        }
     }
 
 
@@ -235,7 +244,9 @@ public class meshManager : MonoBehaviour
             m.SetMatrix("_MATRIX_M", M);
             m.SetBuffer("_VertexBuffer", GPU_VertexBuffer);
         }
-        
+
+        m_meshBound = m_meshRenderer.bounds;
+        m_meshBound.size = m_meshBound.size * 100f;
 
         Debug.Log(string.Format("Initialized Shader Parameters. {0} materials were found", m_mats.Length));
     }
